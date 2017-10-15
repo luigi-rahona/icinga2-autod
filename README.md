@@ -1,10 +1,7 @@
-# icinga2-autod
+# icinga2-gen
 
 ##Purpose:
-The purpose of icinga2-autod is to bring basic auto-discovery Icinga2 (or Icinga/Nagios Core with minor modifications) in an effort to take some of the pain away from discovering and adding a bunch of devices on new or existing networks. The focus of this tool is to quickly generate a fairly suitable host config with custom vars to tie them to HostGroups. 
-
-##Requirements
-This utility requires Linux packages 'nmap' and 'snmp' (or 'net-snmp + net-snmp-utils' on RHEL). It will not run until any missing requirements are satisfied.  
+The purpose of icinga2-autogen is to bring basic auto-generation of config files for Icinga2 by retrieving information from a iTop database.
 
 ##Installation
 ```bash
