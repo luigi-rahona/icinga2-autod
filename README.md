@@ -1,9 +1,9 @@
-# icinga2-gen
+# icinga2-autogen
 
-##Purpose:
-The purpose of icinga2-autogen is to bring basic auto-generation of config files for Icinga2 by retrieving information from a iTop database.
+# Purpose:
+The purpose of icinga2-autogen is to bring basic auto-generation of config files for Icinga2 by retrieving information from a MySQL database.
 
-##Installation
+# Installation
 ```bash
 git clone https://github.com/hobbsh/icinga2-autod.git
 cd icinga2-autod
@@ -12,7 +12,7 @@ cd icinga2-autod
 ```
 Will output discovered_hosts.conf to current directory. 
 
-##Usage:
+# Usage:
 This utility is meant to serve as a way to quickly generate a base hosts config for a given network. The host objects it creates (depending on the information it can gather) provide enough data to use HostGroups to do most of your check manangement. It's by no means a catch-all or the only way to do it, but I figured people might have a use for it.
 
 ```
@@ -36,12 +36,4 @@ optional arguments:
 ```
 Add your own sys_descriptor matches in the compile_hvars method to add custom variables. Hoping to add a better way of handling this soon
 
-##TODO:
-- More options
- - Allow user to input hostname FQDN format (should it come to that)
- - Specify SNMP timeout/retries
-- Allow different hostype definitions (maybe parse templates.conf)
-- Allow more in-depth host objects in general
-- Integrate with icingaweb2
-- Add SNMPv3 Support
-- Handle bad user input better
+
