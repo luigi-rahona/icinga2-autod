@@ -4,6 +4,8 @@ import util.checkpkg as checkpkg
 import sys
 import subprocess
 import json
+import pymysql.cursors
+import pymysql
 
 try:
     import argparse
@@ -34,27 +36,21 @@ USAGE = './icinga-autogen.py -u mysql_username -p mysql_password -H mysql_host -
 
 def build_parser():
 
-    parser = argparse.ArgumentParser(description='Icinga2 autogen')
+    parser = argparse.ArgumentParser(description='Icinga2 config autogenerator')
 
-    parser.add_argument('-n', '--network', required=True,
-	help='Network segment (only /24) to iterate through for live IP addresses in CIDR IPv4 Notation')
+    parser.add_argument('-u', '--username', required=True,
+	help='MySQL username')
 
-    parser.add_argument('-L', '--location', default=None,
-        help='Location alias of the network - will be appended to the hosts config (i.e. hosts_location.conf)')
+    parser.add_argument('-p', '--password', required=True,
+        help='MySQL password')
 
-    parser.add_argument('-c', '--communities', default="public,private",
-        help='Specify comma-separated list of SNMP communities to iterate through (to override default public,private)')
+    parser.add_argument('-H', '--hostname', required=True,
+        help='MySQL Server')
 
-    parser.add_argument('-d', '--debug', default=False,
-        help='Specify comma-separated list of SNMP communities to iterate through (to override default public,private)')
-
-    #The following two arguments have no effect currently
-    parser.add_argument('-r', '--reparse-iana', default=False,
-        help='Whether icinga-autod should grab a fresh version of the sysObjectIDs from the IANA URL')
-
-    parser.add_argument('-t', '--thorough', default=0,
-        help='Thorough scan mode (will take longer) - will try additional SNMP versions/communities to try to gather as much information as possible')
-
+    parser.add_argument('-d', '--database', required=True,
+        help='MySQL Database')
+        
+        
     return parser
 
 def main():
@@ -69,42 +65,25 @@ def main():
 	sys.stderr.write("There was a problem validating the arguments supplied. Please check your input and try again. Exiting...\n")
 	sys.exit(1)
 
-    if args.debug:
-        debug = True
-    else:
-	debug = False
     
     start_time = time.time()
 
-    cidr = args.network
 
-    location = args.location
+    #Connect to database
+    connection = pymysql.connect(host=args.hostname,
+                             user=args.username,
+                             password=args.password,
+                             db=args.database,
+                             cursorclass=pymysql.cursors.DictCursor)
 
-    credential = dict()
-    credential['version'] = '2c'
-    credential['community'] = args.communities.split(',')
+try:
 
-    #Hostname and sysDescr OIDs
-    oids = '1.3.6.1.2.1.1.5.0 1.3.6.1.2.1.1.1.0 1.3.6.1.2.1.1.2.0'
-
-    #Scan the network
-    hosts = handle_netscan(cidr)
-
-    all_hosts = {}
-
-    print("Found {0} hosts - gathering more info (can take up to 2 minutes)".format(get_count(hosts)))
-
-    try:
-	with open('iana_numbers.json', 'r') as f:
-	    numbers = json.load(f)
-    except Exception, e:
-	try:
-    	    numbers = ianaparse.IanaParser().parse()
-	except:
-	    sys.exit("Unable to open iana_numbers.json or read from the URL. Exiting...")
-
-	sys.stderr.write('Unable to open iana_numbers.json, trying URL method. Please wait\n')
-
+    with connection.cursor() as cursor:
+        sql = "SELECT `name`, `address`, `display` FROM `hosts` WHERE `monitored`=1"
+        cursor.execute(sql)
+        hosts = cursor.fetchall()
+finally:
+    connection.close()
 
     for host in hosts:
 	host = str(host)
@@ -158,36 +137,8 @@ def main():
     outfile = compile_hosts(all_hosts, location)
     print "Wrote data to "+outfile
 
-def vendor_match(numbers, sysobject):
-    if sysobject:
-	#Possible prefixes in sysObjectID OID largely dependent on MIB used
-	prefixes = ['SNMPv2-SMI::enterprises.', 'iso.3.6.1.4.1.', '1.3.6.1.4.1.', 'NET-SNMP-MIB::netSnmpAgentOIDs.']
-	
-	for prefix in prefixes:
-	    if sysobject.startswith(prefix):
-	        sysobject = sysobject[len(prefix):]
-	
-	values = sysobject.split('.')
-	#first value will be the enterprise number
-	vendor_num = values[0]
-
-	try:
-	    vendor_string = numbers[vendor_num]
-	    return vendor_string
-
-	except Exception, e:
-	    sys.stderr.write('Unknown sysObjectID prefix encountered - you can add it to the prefix list in vendor_match(), but please report this on GitHub\n'+str(e))
-	    return False
-    else:
-	return False
-
 def check_args(args):
     '''Exit if required arguments not specified'''
-    '''
-    if args.network == None:
-	sys.stderr.write("Network and/or location are required arguments! Use -h for help\n")
-	sys.exit(1)
-    '''
     check_flags = {}
     '''Iterate through specified args and make sure input is valid. TODO: add more flags'''
     for k,v in vars(args).iteritems():
@@ -212,29 +163,6 @@ def check_args(args):
 	    sys.stderr.write("Check "+flag+" failed to validate your input.\n")
 	    if flag == last_key:
 		return False 
-
-def is_valid_ipv4_address(address):
-    '''from http://stackoverflow.com/questions/319279/how-to-validate-ip-address-in-python'''
-    try:
-        socket.inet_pton(socket.AF_INET, address)
-    except AttributeError:  # no inet_pton here, sorry
-        try:
-            socket.inet_aton(address)
-        except socket.error:
-            return False
-        return address.count('.') == 3
-    except socket.error:  # not a valid address
-        return False
-
-    return True
-
-def get_count(hosts):
-    count = len(hosts)
-    if count == 0:
-	print "No hosts found! Is the network reachable? \nExiting..."
-	sys.exit(0)
-    else:
-        return count
 
 def compile_hosts(data, location):
     if location: 
@@ -294,80 +222,6 @@ def compile_hvars(sysdesc):
 
     return hostvars
 
-def handle_netscan(cidr):
-    '''
-    Scan network with nmap using ping only
-    '''
-    start = time.time()
-
-    print "Starting scan for "+cidr
-
-    ret, output, err = exec_command('nmap -sn -sP {0}'.format(cidr))
-    if ret and err:
-        sys.stderr.write('There was a problem performing the scan - is the network reachable?')
-	sys.exit(1)
-    else:
-	print ("Scan took %s seconds" % (time.time() - start))
-	data = parse_nmap_scan(output)
-	if data:
-	    return data
-	else:
-	   sys.stderr.write('Unable to parse nmap scan results! Please report this issue')
-	   sys.exit(1)
-
-def parse_nmap_scan(data):
-    data_list = data.split('\n')
-    match = 'Nmap scan report for '
-    hosts = []
-    for line in data_list:
-        if match in line and line is not None:
-            line = line[len(match):].strip(' ')
-
-            if '(' in line:
-                remove = '()'
-                for c in remove:
-                    line = line.replace(c, '')
-
-                line = ','.join(line.split(' '))
-
-            hosts.append(line)
-
-    return hosts
-
-def snmpget_by_cl(host, credential, oid, timeout=1, retries=0):
-    '''
-    Slightly modified snmpget method from net-snmp source to loop through multiple communities if necessary
-    '''
-
-    data = {}
-    version = credential['version']
-    communities = credential['community']
-    com_count = len(communities)
-
-    for i in range(0, com_count):
-	cmd = ''
-	community = communities[i].strip()
-        cmd = "snmpget -Oqv -v %s -c %s -r %s -t %s %s %s" % (
-            version, community, retries, timeout, host, oid)
-	
-	returncode, output, err = exec_command(cmd)
-	
-	#print returncode, output, err
-        if returncode and err:
-	    if i < com_count:
-	        continue	
-	    else:
-		data['error'] = str(err)
-	else:
-	    try:
-	        data['output'] = output
-	        data['community'] = community
-		#Got the data, now get out
-		break	
-	    except Exception, e:
-		print "There was a problem appending data to the dict " + str(e)
-
-    return data
 
 def exec_command(command):
     """Execute command.
