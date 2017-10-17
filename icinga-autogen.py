@@ -105,19 +105,22 @@ def compile_hosts(data):
         hostname = host["name"]
         ip = host["address"]
         display = host["display"]
-	host_entry = build_host_entry(hostname, str(ip), display)
+        template = host["template"]
+        group = host["group"]
+	host_entry = build_host_entry(hostname, template str(ip), display, group)
 	f.write(host_entry)
 
     f.close()
 
     return filename
 
-def build_host_entry(hostname, ip, display):
+def build_host_entry(hostname, template, ip, display, group):
     host_entry = ( 'object Host "%s" {\n'
-		   '  import "generic-host"\n'
+		   '  import "%s"\n'
 		   '  address = "%s"\n'
                    '  display_name = "%s"\n'
-		 ) % (hostname, ip, display)
+                   '  groups = "[\"%s\"]"\n'
+		 ) % (hostname, template ip, display, group)
 
     host_entry += '}\n'
 
