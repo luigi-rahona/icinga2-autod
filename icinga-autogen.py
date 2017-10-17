@@ -70,7 +70,7 @@ def main():
     '''Write the Icinga2 configuration file'''
     outfile = compile_hosts(hosts)
     '''All done'''
-    print "Wrote data to "+outfile+", it took --- %s seconds ---" % (time.time() - start_time))
+    print ("Wrote data to "+outfile+", it took --- %s seconds ---" % (time.time() - start_time))
 def check_args(args):
     '''Exit if required arguments not specified'''
     check_flags = {}
