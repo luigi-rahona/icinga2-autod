@@ -107,7 +107,7 @@ def compile_hosts(data):
         display = host["display"]
         template = host["template"]
         group = host["group"]
-	host_entry = build_host_entry(hostname, template str(ip), display, group)
+	host_entry = build_host_entry(hostname, template, str(ip), display, group)
 	f.write(host_entry)
 
     f.close()
@@ -120,7 +120,7 @@ def build_host_entry(hostname, template, ip, display, group):
 		   '  address = "%s"\n'
                    '  display_name = "%s"\n'
                    '  groups = "[\"%s\"]"\n'
-		 ) % (hostname, template ip, display, group)
+		 ) % (hostname, template, ip, display, group)
 
     host_entry += '}\n'
 
