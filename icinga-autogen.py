@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import util.checkpkg as checkpkg
-
 import sys
 import subprocess
 import json
