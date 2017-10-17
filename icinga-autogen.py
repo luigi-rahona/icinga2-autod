@@ -37,16 +37,16 @@ def build_parser():
 
     parser = argparse.ArgumentParser(description='Icinga2 config autogenerator')
 
-    parser.add_argument('-u', '--username', required=True,
+    parser.add_argument('--username', required=True,
 	help='MySQL username')
 
-    parser.add_argument('-p', '--password', required=True,
+    parser.add_argument('--password', required=True,
         help='MySQL password')
 
-    parser.add_argument('-H', '--hostname', required=True,
+    parser.add_argument('--hostname', required=True,
         help='MySQL Server')
 
-    parser.add_argument('-d', '--database', required=True,
+    parser.add_argument('--database', required=True,
         help='MySQL Database')
         
         
@@ -67,10 +67,7 @@ def main():
     '''Unknown function, I'll check it later''' 
     start_time = time.time()
     '''Connect to db and grab hosts'''
-    hosts = connect_db(args.hostname,
-                       user=args.username,
-                       password=args.password,
-                       db=args.database)
+    hosts = connect_db(args.hostname,args.username,args.password,args.database)
 
     '''Write the Icinga2 configuration file'''
     outfile = compile_hosts(hosts)
@@ -81,9 +78,13 @@ def check_args(args):
     '''Exit if required arguments not specified'''
     check_flags = {}
 
-def connect_db(host,user,password,db):
+def connect_db(hostname,username,password,db):
     #Connect to database
-    connection = pymysql.connect(host,user,password,db)
+    connection = pymysql.connect(host=hostname,
+                       user=username,
+                       password=password,
+                       db=db,
+                       cursorclass=pymysql.cursors.DictCursor)
 
     try:
         with connection.cursor() as cursor:
