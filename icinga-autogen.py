@@ -71,7 +71,7 @@ def main():
     outfile = compile_hosts(hosts)
     '''All done'''
     print "Wrote data to "+outfile
-
+    print(" ,it took --- %s seconds ---" % (time.time() - start_time))
 def check_args(args):
     '''Exit if required arguments not specified'''
     check_flags = {}
