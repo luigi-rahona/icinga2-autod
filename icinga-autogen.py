@@ -88,7 +88,7 @@ def connect_db(hostname,username,password,db):
 
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT `name`, `address`, `display` FROM `hosts` WHERE `monitored`=1"
+            sql = "SELECT `name`, `address`, `display`, `template`, `place` FROM `hosts` WHERE `monitored`=1"
             cursor.execute(sql)
             hosts = cursor.fetchall()
 
@@ -106,7 +106,7 @@ def compile_hosts(data):
         ip = host["address"]
         display = host["display"]
         template = host["template"]
-        group = host["group"]
+        group = host["place"]
 	host_entry = build_host_entry(hostname, template, str(ip), display, group)
 	f.write(host_entry)
 
